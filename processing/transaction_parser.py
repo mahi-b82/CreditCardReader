@@ -1,12 +1,13 @@
 import re
-
-
 def parse_transactions(text):
+
     transactions = []
 
     # Process the PDF line by line
     lines = text.splitlines()
 
+    # Match:
+    # Date | Description | Debit/Credit | Amount | Balance
     pattern = re.compile(
         r"^\s*"
         r"(\d{2}-[A-Za-z]{3}-\d{4})\s+"
@@ -19,6 +20,7 @@ def parse_transactions(text):
     )
 
     for line in lines:
+
         line = line.strip()
 
         match = pattern.match(line)
