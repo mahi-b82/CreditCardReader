@@ -9,3 +9,9 @@ def read_pdf(pdf_path):
             if text:
                 full_text += text + "\n"
     return full_text
+
+
+
+
+
+    
