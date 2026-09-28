@@ -1,4 +1,3 @@
-
 import os
 import tempfile
 import pandas as pd
@@ -204,18 +203,102 @@ with tab1:
         mime="text/csv"
     )
 
-
 # ==================================================
 # TAB 2: SPENDING ANALYSIS
 # ==================================================
 
 with tab2:
+
+    # --------------------------------------------------
+    # CREDIT & DEBIT SUMMARY
+    # --------------------------------------------------
+
+    st.subheader("💳 Transaction Summary")
+
+    debit_count = len(debit_df)
+    credit_count = len(credit_df)
+
+    net_amount = total_debit - total_credit
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    col1.metric(
+        "Total Debit",
+        f"₹{total_debit:,.2f}"
+    )
+
+    col2.metric(
+        "Total Credit",
+        f"₹{total_credit:,.2f}"
+    )
+
+    col3.metric(
+        "Debit Transactions",
+        debit_count
+    )
+
+    col4.metric(
+        "Credit Transactions",
+        credit_count
+    )
+
+    col5.metric(
+        "Net Amount",
+        f"₹{net_amount:,.2f}"
+    )
+
+    st.divider()
+
+    # --------------------------------------------------
+    # CREDIT TRANSACTIONS
+    # --------------------------------------------------
+
+    st.subheader("💰 Credits / Adjustments")
+
+    if credit_df.empty:
+
+        st.info("No credit transactions found.")
+
+    else:
+
+        credit_display = credit_df[
+            [
+                "date",
+                "description",
+                "amount",
+                "balance"
+            ]
+        ].copy()
+
+        credit_display = credit_display.rename(
+            columns={
+                "date": "Date",
+                "description": "Description",
+                "amount": "Amount",
+                "balance": "Balance"
+            }
+        )
+
+        st.dataframe(
+            credit_display,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.divider()
+
+    # --------------------------------------------------
+    # CATEGORY-WISE SPENDING
+    # --------------------------------------------------
+
     st.subheader("Category-wise Spending")
 
     if debit_df.empty:
+
         st.info("No debit transactions found.")
 
     else:
+
         category_analysis = (
             debit_df
             .groupby("category")
@@ -248,6 +331,10 @@ with tab2:
         )
 
         st.divider()
+
+        # --------------------------------------------------
+        # MONTHLY SPENDING
+        # --------------------------------------------------
 
         st.subheader("Monthly Spending")
 
