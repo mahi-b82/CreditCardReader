@@ -10,6 +10,8 @@ from processing.anomaly_detector import detect_unusual_transactions
 from processing.spending_patterns import analyze_spending_patterns
 from processing.financial_insights import generate_financial_insights
 from reports.excel_generator import generate_excel
+from processing.emi_detector import detect_emi_transactions
+from processing.gst_detector import detect_gst_transactions
 
 
 # ==================================================
@@ -78,6 +80,16 @@ finally:
 
 transactions = parse_transactions(text)
 
+emi_transactions = detect_emi_transactions(
+    transactions,
+    text
+)
+
+gst_transactions = detect_gst_transactions(
+    transactions,
+    text
+)
+
 if not transactions:
     st.error(
         "No transactions were detected. "
@@ -121,6 +133,42 @@ debit_df = df[
 credit_df = df[
     df["type"] == "Credit"
 ].copy()
+
+
+# ==================================================
+# EMI DATAFRAME
+# ==================================================
+
+emi_df = pd.DataFrame(emi_transactions)
+
+if not emi_df.empty:
+    emi_df["date"] = pd.to_datetime(
+        emi_df["date"],
+        format="%d-%b-%Y",
+        errors="coerce"
+    )
+
+    emi_df = emi_df[
+        emi_df["is_emi"] == True
+    ].copy()
+
+
+# ==================================================
+# GST DATAFRAME
+# ==================================================
+
+gst_df = pd.DataFrame(gst_transactions)
+
+if not gst_df.empty:
+    gst_df["date"] = pd.to_datetime(
+        gst_df["date"],
+        format="%d-%b-%Y",
+        errors="coerce"
+    )
+
+    gst_df = gst_df[
+        gst_df["has_gst"] == True
+    ].copy()
 
 
 # ==================================================
@@ -184,6 +232,11 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # ==================================================
 
 with tab1:
+
+    # --------------------------------------------------
+    # ALL TRANSACTIONS
+    # --------------------------------------------------
+
     st.subheader("All Transactions")
 
     st.dataframe(
@@ -202,6 +255,119 @@ with tab1:
         file_name="transactions.csv",
         mime="text/csv"
     )
+
+    st.divider()
+
+    # --------------------------------------------------
+    # EMI DETAILS
+    # --------------------------------------------------
+
+    st.subheader("💳 EMI Details")
+
+    emi_count = len(emi_df)
+
+    st.metric(
+        "EMI Transactions Detected",
+        emi_count
+    )
+
+    if emi_df.empty:
+
+        st.info(
+            "No EMI transactions were detected in this statement."
+        )
+
+    else:
+
+        emi_display = emi_df[
+            [
+                "date",
+                "description",
+                "amount",
+                "emi_tenure",
+                "emi_installment",
+                "emi_principal",
+                "emi_interest",
+                "emi_gst"
+            ]
+        ].copy()
+
+        emi_display = emi_display.rename(
+            columns={
+                "date": "Date",
+                "description": "Description",
+                "amount": "EMI Amount",
+                "emi_tenure": "Tenure",
+                "emi_installment": "Installment",
+                "emi_principal": "Principal",
+                "emi_interest": "Interest",
+                "emi_gst": "GST on Interest"
+            }
+        )
+
+        st.dataframe(
+            emi_display,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.divider()
+
+    # --------------------------------------------------
+    # GST DETAILS
+    # --------------------------------------------------
+
+    st.subheader("🧾 GST Details")
+
+    gst_count = len(gst_df)
+
+    st.metric(
+        "GST Transactions Detected",
+        gst_count
+    )
+
+    if gst_df.empty:
+
+        st.info(
+            "No GST-related transactions were detected in this statement."
+        )
+
+    else:
+
+        gst_display = gst_df[
+            [
+                "date",
+                "description",
+                "amount",
+                "gst_type",
+                "gst_rate",
+                "gst_base_amount",
+                "gst_cgst",
+                "gst_sgst",
+                "gst_igst"
+            ]
+        ].copy()
+
+        gst_display = gst_display.rename(
+            columns={
+                "date": "Date",
+                "description": "Description",
+                "amount": "Transaction Amount",
+                "gst_type": "GST Type",
+                "gst_rate": "GST Rate",
+                "gst_base_amount": "Taxable Base",
+                "gst_cgst": "CGST",
+                "gst_sgst": "SGST",
+                "gst_igst": "IGST"
+            }
+        )
+
+        st.dataframe(
+            gst_display,
+            use_container_width=True,
+            hide_index=True
+        )
+
 
 # ==================================================
 # TAB 2: SPENDING ANALYSIS
@@ -367,6 +533,7 @@ with tab2:
 # ==================================================
 
 with tab3:
+
     st.subheader("Unusual Transaction Detection")
 
     unusual_transactions = (
@@ -374,11 +541,13 @@ with tab3:
     )
 
     if unusual_transactions.empty:
+
         st.success(
             "No unusually large debit transactions detected."
         )
 
     else:
+
         st.warning(
             f"{len(unusual_transactions)} unusual "
             "transaction(s) detected."
@@ -397,6 +566,7 @@ with tab3:
     patterns = analyze_spending_patterns(df)
 
     if patterns:
+
         col1, col2, col3 = st.columns(3)
 
         col1.metric(
@@ -427,6 +597,7 @@ with tab3:
         )
 
     else:
+
         st.info(
             "Not enough debit data to calculate spending patterns."
         )
@@ -437,6 +608,7 @@ with tab3:
 # ==================================================
 
 with tab4:
+
     st.subheader("Automatic Financial Insights")
 
     patterns = analyze_spending_patterns(df)
@@ -452,10 +624,12 @@ with tab4:
     )
 
     if insights:
+
         for insight in insights:
             st.info(f"💡 {insight}")
 
     else:
+
         st.info(
             "No financial insights are available."
         )
@@ -466,6 +640,7 @@ with tab4:
 # ==================================================
 
 with tab5:
+
     st.subheader("Intelligent Transaction Classification")
 
     st.write(
@@ -503,12 +678,14 @@ if st.button("Generate Excel Report"):
     )
 
     try:
+
         generate_excel(
             df,
             output_path
         )
 
         with open(output_path, "rb") as excel_file:
+
             st.download_button(
                 label="Download Excel Report",
                 data=excel_file,
@@ -519,9 +696,12 @@ if st.button("Generate Excel Report"):
                 )
             )
 
-        st.success("Excel report generated successfully.")
+        st.success(
+            "Excel report generated successfully."
+        )
 
     except Exception as error:
+
         st.error(
             f"Could not generate Excel report: {error}"
         )
