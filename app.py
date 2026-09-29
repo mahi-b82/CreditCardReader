@@ -681,7 +681,9 @@ if st.button("Generate Excel Report"):
 
         generate_excel(
             df,
-            output_path
+            output_path,
+            emi_transactions,
+            gst_transactions
         )
 
         with open(output_path, "rb") as excel_file:
